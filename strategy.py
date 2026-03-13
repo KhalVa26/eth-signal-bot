@@ -8,6 +8,8 @@ def calculate_indicators(df):
 
     df["vol_ma"] = df["volume"].rolling(20).mean()
 
+    df["atr"] = ta.volatility.average_true_range(df["high"], df["low"], df["close"], window=14)
+
     return df
 
 
@@ -15,6 +17,7 @@ def check_signal(df):
 
     df = calculate_indicators(df)
     last = df.iloc[-1]
+    atr = last["atr"]
     volume_ok = last["volume"] > last["vol_ma"]
 
     price = last["close"]
@@ -24,8 +27,8 @@ def check_signal(df):
         return {
             "type": "LONG",
             "entry": round(price,2),
-            "stop": round(price * 0.99,2),
-            "take": round(price * 1.02,2)
+            stop = price - atr * 1.5
+            take = price + atr * 3
         }
 
     if last["ema50"] < last["ema200"] and 50 < last["rsi"] < 60:
@@ -33,8 +36,8 @@ def check_signal(df):
         return {
             "type": "SHORT",
             "entry": round(price,2),
-            "stop": round(price * 1.01,2),
-            "take": round(price * 0.98,2)
+            stop = price + atr * 1.5
+            take = price - atr * 3
         }
 
     return None
