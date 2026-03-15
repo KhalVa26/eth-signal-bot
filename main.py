@@ -2,7 +2,7 @@ import logging
 import asyncio
 
 from config import CHECK_INTERVAL, SYMBOL, TIMEFRAME, CHAT_ID
-from market import get_ohlcv
+from market import get_ohlcv, exchange
 from strategy import check_signal
 from telegram_bot import build_bot
 
@@ -16,8 +16,8 @@ def generate_signal():
     global last_signal
 
     df = get_ohlcv(SYMBOL, TIMEFRAME)
-
-  signal = check_signal(df)
+    
+    signal = check_signal(df, exchange)
 
     if signal == last_signal:
         return None
