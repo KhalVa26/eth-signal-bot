@@ -1,24 +1,15 @@
 import ta
 import pandas as pd
 
-
 def calculate_indicators(df):
-
     df["ema50"] = ta.trend.ema_indicator(df["close"], window=50)
     df["ema200"] = ta.trend.ema_indicator(df["close"], window=200)
     df["rsi"] = ta.momentum.rsi(df["close"], window=14)
-
     df["vol_ma"] = df["volume"].rolling(20).mean()
-
-    df["atr"] = ta.volatility.average_true_range(
-        df["high"], df["low"], df["close"], window=14
-    )
-
+    df["atr"] = ta.volatility.average_true_range(df["high"], df["low"], df["close"], window=14)
     return df
 
-
 def check_signal(df, exchange):
-
     df = calculate_indicators(df)
     last = df.iloc[-1]
 
@@ -31,9 +22,7 @@ def check_signal(df, exchange):
     df1h = pd.DataFrame(
         ohlcv1h, columns=["time", "open", "high", "low", "close", "volume"]
     )
-
     df1h["ema200"] = ta.trend.ema_indicator(df1h["close"], window=200)
-
     trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema200"] else "bear"
 
     # ===== 5M ENTRY =====
@@ -41,19 +30,11 @@ def check_signal(df, exchange):
     df5m = pd.DataFrame(
         ohlcv5m, columns=["time", "open", "high", "low", "close", "volume"]
     )
-
     df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
-
     entry_ok = 40 < df5m.iloc[-1]["rsi"] < 60
 
     # ===== LONG =====
-    if (
-        last["ema50"] > last["ema200"]
-        and 40 < last["rsi"] < 50
-        and volume_ok
-        and trend == "bull"
-        and entry_ok
-    ):
+    if last["ema50"] > last["ema200"] and 40 < last["rsi"] < 50 and volume_ok and trend == "bull" and entry_ok:
         return {
             "type": "LONG",
             "entry": round(price, 2),
@@ -62,13 +43,7 @@ def check_signal(df, exchange):
         }
 
     # ===== SHORT =====
-    if (
-        last["ema50"] < last["ema200"]
-        and 50 < last["rsi"] < 60
-        and volume_ok
-        and trend == "bear"
-        and entry_ok
-    ):
+    if last["ema50"] < last["ema200"] and 50 < last["rsi"] < 60 and volume_ok and trend == "bear" and entry_ok:
         return {
             "type": "SHORT",
             "entry": round(price, 2),
