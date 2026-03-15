@@ -17,12 +17,26 @@ def check_signal(df):
 
     df = calculate_indicators(df)
     last = df.iloc[-1]
+    # ===== 1H TREND =====
+ohlcv1h = exchange.fetch_ohlcv("ETH/USDT", "1h", limit=200)
+df1h = pd.DataFrame(ohlcv1h, columns=["time","open","high","low","close","volume"])
+
+df1h["ema200"] = ta.trend.ema_indicator(df1h["close"], window=200)
+
+trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema200"] else "bear"
     atr = last["atr"]
     volume_ok = last["volume"] > last["vol_ma"]
+# ===== 5M ENTRY =====
+ohlcv5m = exchange.fetch_ohlcv("ETH/USDT", "5m", limit=100)
+df5m = pd.DataFrame(ohlcv5m, columns=["time","open","high","low","close","volume"])
+
+df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
+
+entry_ok = 40 < df5m.iloc[-1]["rsi"] < 60
 
     price = last["close"]
 
-    if last["ema50"] > last["ema200"] and 40 < last["rsi"] < 50 and volume_ok:
+    if last["ema50"] > last["ema200"] and 40 < last["rsi"] < 50 and volume_ok and trend == "bull" and entry_ok:
 
         return {
     "type": "LONG",
@@ -30,7 +44,7 @@ def check_signal(df):
     "stop": round(price - atr * 1.5, 2),
     "take": round(price + atr * 3, 2)
 }
-    if last["ema50"] < last["ema200"] and 50 < last["rsi"] < 60:
+ if last["ema50"] < last["ema200"] and 50 < last["rsi"] < 60 and volume_ok and trend == "bear" and entry_ok:
 
        return {
     "type": "SHORT",
