@@ -10,7 +10,6 @@ logging.basicConfig(level=logging.INFO)
 
 last_signal = None
 
-# ===== sync fetch OHLCV =====
 def get_ohlcv(symbol, timeframe, limit=200):
     exchange = ccxt.binance()
     bars = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
@@ -20,7 +19,6 @@ def get_ohlcv(symbol, timeframe, limit=200):
     df.set_index("time", inplace=True)
     return df
 
-# ===== signal logic =====
 def generate_signal():
     global last_signal
     df = get_ohlcv(SYMBOL, TIMEFRAME)
@@ -40,7 +38,6 @@ def generate_signal():
     last_signal = signal
     return signal
 
-# ===== async loop для авто сигналів =====
 async def auto_signal(app):
     while True:
         signal = generate_signal()
@@ -55,20 +52,19 @@ Stop: {signal['stop']}
 Take: {signal['take']}
 """
             await app.bot.send_message(chat_id=CHAT_ID, text=text)
-        await asyncio.sleep(CHECK_INTERVAL)  # пауза між сигналами
+        await asyncio.sleep(CHECK_INTERVAL)
 
-# ===== main =====
 def main():
     app = build_bot(generate_signal)
-    
-    # ===== запускаємо авто сигнали всередині run_polling =====
+
+    # запускаємо Telegram polling + авто-сигнали одночасно
     async def runner():
         await asyncio.gather(
             app.run_polling(),
             auto_signal(app)
         )
-    
-    asyncio.run(runner())  # тут запускаємо event loop правильно
+
+    asyncio.run(runner())
 
 if __name__ == "__main__":
     main()
