@@ -17,7 +17,7 @@ def generate_signal():
 
     df = get_ohlcv(SYMBOL, TIMEFRAME)
 
-    signal = check_signal(df)
+   signal = check_signal(df, exchange)
 
     if signal == last_signal:
         return None
