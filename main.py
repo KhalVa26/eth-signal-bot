@@ -2,7 +2,7 @@ import logging
 import asyncio
 from config import CHECK_INTERVAL, SYMBOL, TIMEFRAME, CHAT_ID
 from telegram_bot import build_bot
-import ccxt.async_support as ccxt
+import ccxt
 import pandas as pd
 import ta
 
@@ -10,23 +10,20 @@ logging.basicConfig(level=logging.INFO)
 
 last_signal = None
 
-# ===== async fetch OHLCV =====
-async def get_ohlcv_async(symbol, timeframe, limit=200):
+# ===== sync fetch OHLCV =====
+def get_ohlcv(symbol, timeframe, limit=200):
     exchange = ccxt.binance()
-    try:
-        bars = await exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
-    finally:
-        await exchange.close()
+    bars = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
+    exchange.close()
     df = pd.DataFrame(bars, columns=["time", "open", "high", "low", "close", "volume"])
     df["time"] = pd.to_datetime(df["time"], unit="ms")
     df.set_index("time", inplace=True)
     return df
 
-# ===== async signal =====
-async def generate_signal():
+# ===== signal logic =====
+def generate_signal():
     global last_signal
-    df = await get_ohlcv_async(SYMBOL, TIMEFRAME)
-    # calculate indicators
+    df = get_ohlcv(SYMBOL, TIMEFRAME)
     df["ema50"] = ta.trend.ema_indicator(df["close"], window=50)
     df["ema200"] = ta.trend.ema_indicator(df["close"], window=200)
     df["rsi"] = ta.momentum.rsi(df["close"], window=14)
@@ -43,11 +40,12 @@ async def generate_signal():
     last_signal = signal
     return signal
 
-# ===== async job for auto signal =====
-async def auto_signal_job(context):
-    signal = await generate_signal()
-    if signal:
-        text = f"""
+# ===== async task for auto signals =====
+async def auto_signal(app):
+    while True:
+        signal = generate_signal()
+        if signal:
+            text = f"""
 AUTO SIGNAL ⚡
 
 ETH/USDT {signal['type']}
@@ -56,13 +54,14 @@ Entry: {signal['entry']}
 Stop: {signal['stop']}
 Take: {signal['take']}
 """
-        await context.bot.send_message(chat_id=CHAT_ID, text=text)
+            await app.bot.send_message(chat_id=CHAT_ID, text=text)
+        await asyncio.sleep(CHECK_INTERVAL)
 
 # ===== main =====
 def main():
     app = build_bot(generate_signal)
-    app.job_queue.run_repeating(auto_signal_job, interval=CHECK_INTERVAL, first=10)
-    app.run_polling()
+    asyncio.create_task(auto_signal(app))  # запускаємо async сигнал
+    app.run_polling()  # запускаємо Telegram бота
 
 if __name__ == "__main__":
     main()
