@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from config import CHECK_INTERVAL, SYMBOL, TIMEFRAME, CHAT_ID
 from telegram_bot import build_bot
 import ccxt
@@ -39,11 +40,12 @@ def generate_signal():
     last_signal = signal
     return signal
 
-# ===== JobQueue task for auto signals =====
-def auto_signal_job(context):
-    signal = generate_signal()
-    if signal:
-        text = f"""
+# ===== async loop для авто сигналів =====
+async def auto_signal(app):
+    while True:
+        signal = generate_signal()
+        if signal:
+            text = f"""
 AUTO SIGNAL ⚡
 
 ETH/USDT {signal['type']}
@@ -52,18 +54,21 @@ Entry: {signal['entry']}
 Stop: {signal['stop']}
 Take: {signal['take']}
 """
-        context.bot.send_message(chat_id=CHAT_ID, text=text)
+            await app.bot.send_message(chat_id=CHAT_ID, text=text)
+        await asyncio.sleep(CHECK_INTERVAL)  # пауза між сигналами
 
 # ===== main =====
 def main():
     app = build_bot(generate_signal)
-
-    # ===== запускаємо auto signal через JobQueue =====
-    # interval в секундах
-    app.job_queue.run_repeating(auto_signal_job, interval=CHECK_INTERVAL, first=10)
-
-    # ===== запуск Telegram бота =====
-    app.run_polling()
+    
+    # ===== запускаємо авто сигнали всередині run_polling =====
+    async def runner():
+        await asyncio.gather(
+            app.run_polling(),
+            auto_signal(app)
+        )
+    
+    asyncio.run(runner())  # тут запускаємо event loop правильно
 
 if __name__ == "__main__":
     main()
