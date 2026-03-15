@@ -1,5 +1,5 @@
 import logging
-import asyncio
+import time
 from config import CHECK_INTERVAL, SYMBOL, TIMEFRAME, CHAT_ID
 from telegram_bot import build_bot
 import ccxt
@@ -10,6 +10,7 @@ logging.basicConfig(level=logging.INFO)
 
 last_signal = None
 
+# ===== fetch OHLCV =====
 def get_ohlcv(symbol, timeframe, limit=200):
     exchange = ccxt.binance()
     bars = exchange.fetch_ohlcv(symbol, timeframe=timeframe, limit=limit)
@@ -19,6 +20,7 @@ def get_ohlcv(symbol, timeframe, limit=200):
     df.set_index("time", inplace=True)
     return df
 
+# ===== signal logic =====
 def generate_signal():
     global last_signal
     df = get_ohlcv(SYMBOL, TIMEFRAME)
@@ -28,17 +30,20 @@ def generate_signal():
     last = df.iloc[-1]
     price = last["close"]
     atr = ta.volatility.average_true_range(df["high"], df["low"], df["close"], window=14).iloc[-1]
+
     signal = None
     if last["ema50"] > last["ema200"] and 40 < last["rsi"] < 50:
         signal = {"type":"LONG","entry":round(price,2),"stop":round(price-atr*1.5,2),"take":round(price+atr*3,2)}
     elif last["ema50"] < last["ema200"] and 50 < last["rsi"] < 60:
         signal = {"type":"SHORT","entry":round(price,2),"stop":round(price+atr*1.5,2),"take":round(price-atr*3,2)}
+
     if signal == last_signal:
         return None
     last_signal = signal
     return signal
 
-async def auto_signal(app):
+# ===== auto signal loop =====
+def auto_signal_loop(app):
     while True:
         signal = generate_signal()
         if signal:
@@ -51,20 +56,19 @@ Entry: {signal['entry']}
 Stop: {signal['stop']}
 Take: {signal['take']}
 """
-            await app.bot.send_message(chat_id=CHAT_ID, text=text)
-        await asyncio.sleep(CHECK_INTERVAL)
+            app.bot.send_message(chat_id=CHAT_ID, text=text)
+        time.sleep(CHECK_INTERVAL)
 
+# ===== main =====
 def main():
     app = build_bot(generate_signal)
-
-    # запускаємо Telegram polling + авто-сигнали одночасно
-    async def runner():
-        await asyncio.gather(
-            app.run_polling(),
-            auto_signal(app)
-        )
-
-    asyncio.run(runner())
+    
+    # запускаємо авто-сигнали в окремому потоці
+    import threading
+    threading.Thread(target=auto_signal_loop, args=(app,), daemon=True).start()
+    
+    # запускаємо Telegram бота
+    app.run_polling()
 
 if __name__ == "__main__":
     main()
