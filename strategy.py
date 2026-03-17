@@ -1,3 +1,4 @@
+from market import get_ohlcv
 import ta
 
 def calculate_indicators(df):
@@ -19,13 +20,19 @@ def check_signal(df):
 
     df = calculate_indicators(df)
     last = df.iloc[-1]
+    # ===== 1H TREND =====
+df1h = get_ohlcv("ETH/USDT", "1h")
+
+df1h["ema200"] = ta.trend.ema_indicator(df1h["close"], window=200)
+
+trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema200"] else "bear"
 
     atr = last["atr"]
     volume_ok = last["volume"] > last["vol_ma"]
     price = last["close"]
 
     # LONG
-    if last["ema50"] > last["ema200"] and 35 < last["rsi"] < 55 and volume_ok:
+    if last["ema50"] > last["ema200"] and 35 < last["rsi"] < 55 and volume_ok and trend == "bull":
 
         return {
             "type": "LONG",
@@ -35,7 +42,7 @@ def check_signal(df):
         }
 
     # SHORT
-    if last["ema50"] < last["ema200"] and 45 < last["rsi"] < 65 and volume_ok:
+    if last["ema50"] < last["ema200"] and 45 < last["rsi"] < 65 and volume_ok and trend == "bear":
 
         return {
             "type": "SHORT",
