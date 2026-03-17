@@ -25,7 +25,7 @@ def check_signal(df):
     price = last["close"]
 
     # LONG
-    if last["ema50"] > last["ema200"] and 40 < last["rsi"] < 50 and volume_ok:
+    if last["ema50"] > last["ema200"] and 35 < last["rsi"] < 55 and volume_ok:
 
         return {
             "type": "LONG",
@@ -35,7 +35,7 @@ def check_signal(df):
         }
 
     # SHORT
-    if last["ema50"] < last["ema200"] and 50 < last["rsi"] < 60 and volume_ok:
+    if last["ema50"] < last["ema200"] and 45 < last["rsi"] < 65 and volume_ok:
 
         return {
             "type": "SHORT",
