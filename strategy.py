@@ -21,12 +21,6 @@ def check_signal(df):
 
     df = calculate_indicators(df)
     last = df.iloc[-1]
-    # ===== 5M ENTRY =====
-df5m = get_ohlcv("ETH/USDT", "5m")
-
-df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
-
-entry_ok = 40 < df5m.iloc[-1]["rsi"] < 60
 
     atr = last["atr"]
     volume_ok = last["volume"] > last["vol_ma"]
@@ -34,10 +28,15 @@ entry_ok = 40 < df5m.iloc[-1]["rsi"] < 60
 
     # ===== 1H TREND =====
     df1h = get_ohlcv("ETH/USDT", "1h")
-
     df1h["ema200"] = ta.trend.ema_indicator(df1h["close"], window=200)
 
     trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema200"] else "bear"
+
+    # ===== 5M ENTRY =====
+    df5m = get_ohlcv("ETH/USDT", "5m")
+    df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
+
+    entry_ok = 45 < df5m.iloc[-1]["rsi"] < 55
 
     # ===== LONG =====
     if (
@@ -45,7 +44,7 @@ entry_ok = 40 < df5m.iloc[-1]["rsi"] < 60
         and 35 < last["rsi"] < 55
         and volume_ok
         and trend == "bull"
-and entry_ok
+        and entry_ok
     ):
 
         return {
@@ -61,7 +60,7 @@ and entry_ok
         and 45 < last["rsi"] < 65
         and volume_ok
         and trend == "bear"
-and entry_ok
+        and entry_ok
     ):
 
         return {
