@@ -32,11 +32,15 @@ def check_signal(df):
 
     trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema200"] else "bear"
 
-    # ===== 5M ENTRY =====
+    # ===== 5M ENTRY (RSI CROSS) =====
     df5m = get_ohlcv("ETH/USDT", "5m")
     df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
 
-    entry_ok = 45 < df5m.iloc[-1]["rsi"] < 55
+    prev_rsi = df5m.iloc[-2]["rsi"]
+    curr_rsi = df5m.iloc[-1]["rsi"]
+
+    entry_long = prev_rsi < 45 and curr_rsi > 45
+    entry_short = prev_rsi > 55 and curr_rsi < 55
 
     # ===== LONG =====
     if (
@@ -44,7 +48,7 @@ def check_signal(df):
         and 35 < last["rsi"] < 55
         and volume_ok
         and trend == "bull"
-        and entry_ok
+        and entry_long
     ):
 
         return {
@@ -60,7 +64,7 @@ def check_signal(df):
         and 45 < last["rsi"] < 65
         and volume_ok
         and trend == "bear"
-        and entry_ok
+        and entry_short
     ):
 
         return {
