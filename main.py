@@ -1,54 +1,66 @@
 import logging
 import asyncio
 
-from config import CHECK_INTERVAL, SYMBOL, TIMEFRAME, CHAT_ID
+from config import CHECK_INTERVAL, SYMBOLS, TIMEFRAME, CHAT_ID
 from market import get_ohlcv
 from strategy import check_signal
 from telegram_bot import build_bot
 
 logging.basicConfig(level=logging.INFO)
 
-last_signal = None
+last_signals = {}  # тепер по кожній монеті окремо
 
 
-def generate_signal():
+def generate_signal(symbol=None):
 
-    global last_signal
+    global last_signals
 
-    df = get_ohlcv(SYMBOL, TIMEFRAME)
+    signals = []
 
-    signal = check_signal(df)
+    symbols_to_check = [symbol] if symbol else SYMBOLS
 
-    if signal == last_signal:
-        return None
+    for sym in symbols_to_check:
 
-    last_signal = signal
+        df = get_ohlcv(sym, TIMEFRAME)
+        signal = check_signal(df)
 
-    return signal
+        if signal:
+
+            # перевірка на дубль
+            if last_signals.get(sym) == signal:
+                continue
+
+            last_signals[sym] = signal
+            signal["symbol"] = sym
+            signals.append(signal)
+
+    return signals
 
 
 async def auto_signal(app):
 
     while True:
 
-        signal = generate_signal()
+        signals = generate_signal()
 
-        if signal:
+        if signals:
 
-            text = f"""
+            for signal in signals:
+
+                text = f"""
 AUTO SIGNAL ⚡
 
-ETH/USDT {signal['type']}
+{signal['symbol']} {signal['type']}
 
 Entry: {signal['entry']}
 Stop: {signal['stop']}
 Take: {signal['take']}
 """
 
-            await app.bot.send_message(
-                chat_id=CHAT_ID,
-                text=text
-            )
+                await app.bot.send_message(
+                    chat_id=CHAT_ID,
+                    text=text
+                )
 
         await asyncio.sleep(CHECK_INTERVAL)
 
