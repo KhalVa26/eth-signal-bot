@@ -17,7 +17,7 @@ def calculate_indicators(df):
     return df
 
 
-def check_signal(df):
+def check_signal(df, symbol):
 
     df = calculate_indicators(df)
     last = df.iloc[-1]
@@ -26,20 +26,36 @@ def check_signal(df):
     volume_ok = last["volume"] > last["vol_ma"]
     price = last["close"]
 
+    # ===== ФІЛЬТР ФЛЕТУ =====
+    ema50 = last["ema50"]
+    ema200 = last["ema200"]
+
+    trend_strength = abs(ema50 - ema200) / price
+
+    if trend_strength < 0.002:
+        return None
+
     # ===== 1H TREND =====
-    df1h = get_ohlcv("ETH/USDT", "1h")
-    df1h["ema200"] = ta.trend.ema_indicator(df1h["close"], window=200)
+    df1h = get_ohlcv(symbol, "1h")
+    df1h["ema50"] = ta.trend.ema_indicator(df1h["close"], window=50)
 
-    trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema200"] else "bear"
+    trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema50"] else "bear"
 
-    # ===== 5M ENTRY (ПОСЛАБЛЕНИЙ) =====
-    df5m = get_ohlcv("ETH/USDT", "5m")
+    # ===== 5M ENTRY =====
+    df5m = get_ohlcv(symbol, "5m")
     df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
 
     curr_rsi = df5m.iloc[-1]["rsi"]
 
     entry_long = curr_rsi > 45
     entry_short = curr_rsi < 55
+
+    # ===== ВХІД НЕ В СЕРЕДИНІ =====
+    recent_high = df["high"].rolling(20).max().iloc[-1]
+    recent_low = df["low"].rolling(20).min().iloc[-1]
+
+    in_upper_zone = price > recent_high * 0.995
+    in_lower_zone = price < recent_low * 1.005
 
     # ===== LONG =====
     if (
@@ -48,6 +64,7 @@ def check_signal(df):
         and volume_ok
         and trend == "bull"
         and entry_long
+        and in_lower_zone
     ):
 
         return {
@@ -64,6 +81,7 @@ def check_signal(df):
         and volume_ok
         and trend == "bear"
         and entry_short
+        and in_upper_zone
     ):
 
         return {
