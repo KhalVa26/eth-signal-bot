@@ -22,7 +22,7 @@ def generate_signal(symbol=None):
     for sym in symbols_to_check:
 
         df = get_ohlcv(sym, TIMEFRAME)
-        signal = check_signal(df)
+        signal = check_signal(df, sym)
 
         if signal:
 
