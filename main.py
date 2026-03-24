@@ -8,7 +8,7 @@ from telegram_bot import build_bot
 
 logging.basicConfig(level=logging.INFO)
 
-last_signals = {}  # тепер по кожній монеті окремо
+last_signals = {}  # по кожній монеті
 
 
 def generate_signal(symbol=None):
@@ -22,7 +22,16 @@ def generate_signal(symbol=None):
     for sym in symbols_to_check:
 
         df = get_ohlcv(sym, TIMEFRAME)
-        signal = check_signal(df, sym)
+
+        # ✅ захист від помилок API
+        if df is None or df.empty:
+            continue
+
+        try:
+            signal = check_signal(df, sym)
+        except Exception as e:
+            print(f"Error on {sym}: {e}")
+            continue
 
         if signal:
 
@@ -41,13 +50,14 @@ async def auto_signal(app):
 
     while True:
 
-        signals = generate_signal()
+        try:
+            signals = generate_signal()
 
-        if signals:
+            if signals:
 
-            for signal in signals:
+                for signal in signals:
 
-                text = f"""
+                    text = f"""
 AUTO SIGNAL ⚡
 
 {signal['symbol']} {signal['type']}
@@ -57,10 +67,13 @@ Stop: {signal['stop']}
 Take: {signal['take']}
 """
 
-                await app.bot.send_message(
-                    chat_id=CHAT_ID,
-                    text=text
-                )
+                    await app.bot.send_message(
+                        chat_id=CHAT_ID,
+                        text=text
+                    )
+
+        except Exception as e:
+            print(f"AUTO LOOP ERROR: {e}")
 
         await asyncio.sleep(CHECK_INTERVAL)
 
