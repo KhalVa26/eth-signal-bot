@@ -9,11 +9,13 @@ keyboard = [
 ]
 markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
 
-# ===== МЕНЮ МОНЕТ =====
+# ===== МЕНЮ МОНЕТ (13 пар) =====
 coins_keyboard = [
-    ["BTC/USDT", "ETH/USDT"],
-    ["SOL/USDT", "BNB/USDT"],
-    ["ATOM/USDT"],
+    ["BTC/USDT", "ETH/USDT", "BNB/USDT"],
+    ["SOL/USDT", "XRP/USDT", "ADA/USDT"],
+    ["LINK/USDT", "LTC/USDT", "SUI/USDT"],
+    ["TON/USDT", "TRX/USDT", "XLM/USDT"],
+    ["XMR/USDT"],
     ["⬅️ Назад"]
 ]
 coins_markup = ReplyKeyboardMarkup(coins_keyboard, resize_keyboard=True)
@@ -101,9 +103,12 @@ def build_bot(signal_func):
         MessageHandler(filters.Regex("Монети"), coins_menu)
     )
 
+    # ✅ ОНОВЛЕНИЙ СПИСОК МОНЕТ
     app.add_handler(
         MessageHandler(
-            filters.Regex("BTC/USDT|ETH/USDT|SOL/USDT|BNB/USDT|ATOM/USDT|⬅️ Назад"),
+            filters.Regex(
+                "BTC/USDT|ETH/USDT|BNB/USDT|SOL/USDT|XRP/USDT|ADA/USDT|LINK/USDT|LTC/USDT|SUI/USDT|TON/USDT|TRX/USDT|XLM/USDT|XMR/USDT|⬅️ Назад"
+            ),
             coin_signal
         )
     )
