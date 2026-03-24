@@ -4,13 +4,21 @@ CHAT_ID = "8121421612"
 # Старе залишаємо (щоб нічого не впало)
 SYMBOL = "ETH/USDT"
 
-# ➕ ДОДАЄМО СПИСОК МОНЕТ
+# ✅ ОНОВЛЕНИЙ СПИСОК (13 пар)
 SYMBOLS = [
     "BTC/USDT",
     "ETH/USDT",
-    "SOL/USDT",
     "BNB/USDT",
-    "ATOM/USDT",
+    "SOL/USDT",
+    "XRP/USDT",
+    "ADA/USDT",
+    "LINK/USDT",
+    "LTC/USDT",
+    "SUI/USDT",
+    "TON/USDT",
+    "TRX/USDT",
+    "XLM/USDT",
+    "XMR/USDT",
 ]
 
 TIMEFRAME = "15m"
