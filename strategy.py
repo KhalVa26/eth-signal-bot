@@ -2,6 +2,16 @@ import ta
 from market import get_ohlcv
 
 
+# ✅ АДАПТИВНЕ ОКРУГЛЕННЯ
+def format_price(price):
+    if price < 1:
+        return round(price, 4)
+    elif price < 100:
+        return round(price, 3)
+    else:
+        return round(price, 2)
+
+
 def calculate_indicators(df):
 
     df["ema50"] = ta.trend.ema_indicator(df["close"], window=50)
@@ -37,12 +47,18 @@ def check_signal(df, symbol):
 
     # ===== 1H TREND =====
     df1h = get_ohlcv(symbol, "1h")
+    if df1h is None or df1h.empty:
+        return None
+
     df1h["ema50"] = ta.trend.ema_indicator(df1h["close"], window=50)
 
     trend = "bull" if df1h.iloc[-1]["close"] > df1h.iloc[-1]["ema50"] else "bear"
 
     # ===== 5M ENTRY =====
     df5m = get_ohlcv(symbol, "5m")
+    if df5m is None or df5m.empty:
+        return None
+
     df5m["rsi"] = ta.momentum.rsi(df5m["close"], window=14)
 
     curr_rsi = df5m.iloc[-1]["rsi"]
@@ -67,11 +83,19 @@ def check_signal(df, symbol):
         and in_lower_zone
     ):
 
+        entry = price
+        stop = price - atr * 1.5
+        take = price + atr * 3
+
+        # ⛔ захист від однакових цін
+        if format_price(entry) == format_price(stop):
+            return None
+
         return {
             "type": "LONG",
-            "entry": round(price, 2),
-            "stop": round(price - atr * 1.5, 2),
-            "take": round(price + atr * 3, 2),
+            "entry": format_price(entry),
+            "stop": format_price(stop),
+            "take": format_price(take),
         }
 
     # ===== SHORT =====
@@ -84,11 +108,19 @@ def check_signal(df, symbol):
         and in_upper_zone
     ):
 
+        entry = price
+        stop = price + atr * 1.5
+        take = price - atr * 3
+
+        # ⛔ захист від однакових цін
+        if format_price(entry) == format_price(stop):
+            return None
+
         return {
             "type": "SHORT",
-            "entry": round(price, 2),
-            "stop": round(price + atr * 1.5, 2),
-            "take": round(price - atr * 3, 2),
+            "entry": format_price(entry),
+            "stop": format_price(stop),
+            "take": format_price(take),
         }
 
     return None
